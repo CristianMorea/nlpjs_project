@@ -8,6 +8,10 @@ const docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));  // Car
 
 // Calcular la similitud de coseno
 function cosineSimilarity(vec1, vec2) {
+  // Asegúrate de que ambos vectores sean 1D
+  vec1 = vec1.reshape([vec1.shape[0]]);
+  vec2 = vec2.reshape([vec2.shape[0]]);
+  
   const dotProduct = tf.dot(vec1, vec2).arraySync();  // Producto punto
   const normVec1 = tf.norm(vec1).arraySync();  // Norma de vec1
   const normVec2 = tf.norm(vec2).arraySync();  // Norma de vec2
@@ -19,13 +23,16 @@ async function searchQuery(query) {
   const model = await use.load();  // Cargar el modelo de Universal Sentence Encoder
   const queryEmbedding = await model.embed(query);  // Obtener el vector de la consulta (embedding)
 
+  // Convertir queryEmbedding en tensor de una sola dimensión
+  const queryTensor = queryEmbedding.reshape([queryEmbedding.shape[1]]);
+
   let highestSimilarity = 0;
   let bestMatch = '';
 
   // Comparar la consulta con cada documento
   for (const [index, docVectorArray] of docVectors.entries()) {
     const docVector = tf.tensor(docVectorArray);  // Convertir el vector del documento en un tensor
-    const similarity = cosineSimilarity(queryEmbedding, docVector);  // Calcular similitud
+    const similarity = cosineSimilarity(queryTensor, docVector);  // Calcular similitud
 
     // Encontrar el documento más similar
     if (similarity > highestSimilarity) {
@@ -39,4 +46,4 @@ async function searchQuery(query) {
 }
 
 // Ejecutar búsqueda con un query
-searchQuery('Texto relacionado con documento 1');
+searchQuery('TextoAI is playing a crucial role in personalized medicine');
