@@ -2,13 +2,11 @@ const fs = require('fs');
 const tf = require('@tensorflow/tfjs');  // Usar tfjs, no tfjs-node
 const use = require('@tensorflow-models/universal-sentence-encoder');
 
-// Documentos
-const documents = ['Texto del documento 1', 'Texto del documento 2', 'Texto del documento 3'];
-const docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));  // Cargar los vectores de documentos
+// Cargar los vectores de documentos desde un archivo JSON
+const docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));
 
-// Calcular la similitud de coseno
+// Calcular la similitud de coseno entre dos vectores
 function cosineSimilarity(vec1, vec2) {
-  // Asegúrate de que ambos vectores sean 1D
   vec1 = vec1.reshape([vec1.shape[0]]);
   vec2 = vec2.reshape([vec2.shape[0]]);
   
@@ -18,32 +16,45 @@ function cosineSimilarity(vec1, vec2) {
   return dotProduct / (normVec1 * normVec2);  // Similitud de coseno
 }
 
-// Realizar la búsqueda
+// Función de búsqueda con una consulta de texto
 async function searchQuery(query) {
   const model = await use.load();  // Cargar el modelo de Universal Sentence Encoder
   const queryEmbedding = await model.embed(query);  // Obtener el vector de la consulta (embedding)
 
   // Convertir queryEmbedding en tensor de una sola dimensión
-  const queryTensor = queryEmbedding.reshape([queryEmbedding.shape[1]]);
+  let queryTensor = queryEmbedding.reshape([queryEmbedding.shape[1]]);
+  
+  // Aquí asumimos que los vectores de documentos tienen 512 dimensiones
+  // Aseguramos que el tamaño de la consulta sea el mismo
+  if (queryTensor.shape[0] !== 512) {
+    queryTensor = tf.pad(queryTensor, [[0, 512 - queryTensor.shape[0]]]);
+  }
 
   let highestSimilarity = 0;
   let bestMatch = '';
 
-  // Comparar la consulta con cada documento
-  for (const [index, docVectorArray] of docVectors.entries()) {
-    const docVector = tf.tensor(docVectorArray);  // Convertir el vector del documento en un tensor
-    const similarity = cosineSimilarity(queryTensor, docVector);  // Calcular similitud
+  // Iterar sobre los vectores de los documentos
+  for (const [docName, docVectorArray] of Object.entries(docVectors)) {
+    let docVector = tf.tensor(docVectorArray[0]);  // Obtener el vector del documento
+
+    // Aseguramos que el vector del documento tenga 512 dimensiones
+    if (docVector.shape[0] !== 512) {
+      docVector = tf.pad(docVector, [[0, 512 - docVector.shape[0]]]);
+    }
+
+    // Calcular la similitud de coseno entre la consulta y el documento
+    const similarity = cosineSimilarity(queryTensor, docVector);
 
     // Encontrar el documento más similar
     if (similarity > highestSimilarity) {
       highestSimilarity = similarity;
-      bestMatch = `Documento ${index + 1}: ${documents[index]}`;
+      bestMatch = `Documento: ${docName}`;
     }
   }
 
   // Mostrar el mejor resultado
-  console.log(`Best match: ${bestMatch} con similitud: ${highestSimilarity}`);
+  console.log(`Mejor coincidencia: ${bestMatch} con similitud: ${highestSimilarity}`);
 }
 
-// Ejecutar búsqueda con un query
-searchQuery('TextoAI is playing a crucial role in personalized medicine');
+// Ejecutar búsqueda con un ejemplo de consulta
+searchQuery('Artificial Intelligence is transforming industries');
