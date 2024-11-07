@@ -36,7 +36,7 @@ const { LangEn } = require('@nlpjs/lang-en');  // Corregido para usar el paquete
   nlp.addAnswer('en', 'greetings.hello', 'Hey there!');
   nlp.addAnswer('en', 'greetings.hello', 'Greetings!');
 
-  // Entrenar el modelo NLP
+  // Entrenar el modelo NLPa
   await nlp.train();
 
   // Procesar una consulta
