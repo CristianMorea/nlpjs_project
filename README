@@ -1,0 +1,31 @@
+# Proyecto NLP.js con Embeddings y Recuperación de Información
+
+Este proyecto utiliza la librería **NLP.js** para procesamiento de lenguaje natural (NLP) con el fin de clasificar intenciones y generar respuestas automáticas. En este README se detallan los pasos realizados hasta ahora para configurar el proyecto, entrenar el modelo y realizar consultas.
+
+## Requisitos Previos
+
+1. **Node.js y npm**: Asegúrate de tener **Node.js** y **npm** instalados en tu máquina. Si no los tienes, puedes descargarlos e instalarlos desde [nodejs.org](https://nodejs.org/).
+2. Verifica la instalación ejecutando los siguientes comandos en la terminal:
+   ```bash
+   node -v
+   npm -v
+1. Crear un Proyecto
+Abre la terminal y crea un nuevo directorio para el proyecto. Luego, navega a dicho directorio y ejecuta npm init para crear el archivo package.json.
+
+bash
+Copiar código
+mkdir nlpjs_project
+cd nlpjs_project
+npm init -y
+2. Instalar NLP.js
+Instala la librería @nlpjs/nlp y otras dependencias necesarias:
+
+bash
+Copiar código
+npm install @nlpjs/core @nlpjs/nlp @nlpjs/lang-en-min
+3. Crear el Archivo app.js
+Crea el archivo principal donde se configurará y entrenará el modelo de NLP.js.
+
+bash
+Copiar código
+touch app.js
