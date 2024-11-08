@@ -3,7 +3,7 @@ const path = require('path');
 const { HfInference } = require('@huggingface/inference');
 require('dotenv').config();
 
-const hfToken = process.env.HF_TOKEN || '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';
+const hfToken = process.env.HF_TOKEN || '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';
 const hf = new HfInference(hfToken);
 
 // Ruta de los documentos y archivo de salida
