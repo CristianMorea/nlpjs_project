@@ -1,4 +1,3 @@
-// embeddings.js
 const fs = require('fs');
 const path = require('path');
 const { HfInference } = require('@huggingface/inference');
