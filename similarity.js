@@ -26,23 +26,31 @@ async function searchQuery(query) {
     queryTensor = tf.pad(queryTensor, [[0, 512 - queryTensor.shape[0]]]);
   }
 
-  let highestSimilarity = 0;
-  let bestMatch = '';
+  let highestSimilarity = -1;  // Comenzamos con una similitud baja
+  let bestMatchText = '';
+  let bestMatchEmbedding = null;
 
+  // Iterar sobre los documentos y fragmentos almacenados
   for (const [docName, docVectorArray] of Object.entries(docVectors)) {
-    let docVector = tf.tensor(docVectorArray[0]);
-    if (docVector.shape[0] !== 512) {
-      docVector = tf.pad(docVector, [[0, 512 - docVector.shape[0]]]);
-    }
+    for (const docVectorData of docVectorArray) {
+      const { texto, embedding } = docVectorData;  // Extraer el texto y el embedding
 
-    const similarity = cosineSimilarity(queryTensor, docVector);
-    if (similarity > highestSimilarity) {
-      highestSimilarity = similarity;
-      bestMatch = `Documento: ${docName}`;
+      let docTensor = tf.tensor(embedding);
+      if (docTensor.shape[0] !== 512) {
+        docTensor = tf.pad(docTensor, [[0, 512 - docTensor.shape[0]]]);
+      }
+
+      const similarity = cosineSimilarity(queryTensor, docTensor);
+      if (similarity > highestSimilarity) {
+        highestSimilarity = similarity;
+        bestMatchText = texto;  // Guardar el texto del fragmento con mayor similitud
+        bestMatchEmbedding = embedding;  // Guardar el embedding más cercano
+      }
     }
   }
 
-  console.log(`Mejor coincidencia: ${bestMatch} con similitud: ${highestSimilarity}`);
+  console.log(`Mejor coincidencia: ${bestMatchText} con similitud: ${highestSimilarity}`);
+  return { bestMatchText, bestMatchEmbedding };  // Devolver tanto el texto como el embedding
 }
 
 module.exports = { searchQuery };

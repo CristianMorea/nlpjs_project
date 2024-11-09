@@ -7,11 +7,11 @@ const { searchQuery } = require('./similarity');
   try {
     // Generar los embeddings de los documentos
     console.log('Generando embeddings...');
-    await generarEmbeddingsDeArchivos();
+    //await generarEmbeddingsDeArchivos();
     console.log('Embeddings generados y guardados.');
 
     // Realizar la búsqueda con una consulta específica
-    const query = "The future of renewable energy is one of the most important discussions of our time. As the world faces mounting concerns over climate change, renewable energy offers a sustainable alternative. With global energy demands steadily increasing, the shift towards clean energy sources has become a critical issue.";
+    const query = "Good practice” does not mean that the knowledge described should always be applied uniformly to all projects;";
     console.log(`Realizando búsqueda con la consulta: "${query}"`);
     await searchQuery(query);
     console.log('Búsqueda completada.');
