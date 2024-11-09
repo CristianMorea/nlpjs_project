@@ -67,17 +67,36 @@ async function generarEmbeddingsDeArchivos() {
       const embeddingsPorArchivo = [];
 
       for (const fragmento of fragmentos) {
-        const response = await hf.featureExtraction({
-          model: 'sentence-transformers/all-MiniLM-L6-v2',
-          inputs: [fragmento],
-        });
+        // Si el fragmento tiene menos de 512 tokens, podemos generar un embedding
+        if (fragmento.split(' ').length <= 512) {
+          const response = await hf.featureExtraction({
+            model: 'sentence-transformers/all-MiniLM-L6-v2',
+            inputs: [fragmento],
+          });
 
-        // Guardar tanto el embedding como el texto del fragmento
-        embeddingsPorArchivo.push({
-          texto: fragmento,
-          embedding: response[0],  // Asumiendo que la respuesta es un array de embeddings
-        });
-        console.log(`Embeddings generados para fragmento de ${archivo}`);
+          // Guardar tanto el embedding como el texto del fragmento
+          embeddingsPorArchivo.push({
+            texto: fragmento,
+            embedding: response[0],  // Asumiendo que la respuesta es un array de embeddings
+          });
+          console.log(`Embeddings generados para fragmento de ${archivo}`);
+        } else {
+          // Si el fragmento es mayor que 512 tokens, lo dividimos en fragmentos más pequeños
+          const subFragmentos = dividirEnFragmentos(fragmento, 512);
+          for (const subFragmento of subFragmentos) {
+            const response = await hf.featureExtraction({
+              model: 'sentence-transformers/all-MiniLM-L6-v2',
+              inputs: [subFragmento],
+            });
+
+            // Guardar tanto el embedding como el texto del fragmento
+            embeddingsPorArchivo.push({
+              texto: subFragmento,
+              embedding: response[0],  // Asumiendo que la respuesta es un array de embeddings
+            });
+            console.log(`Embeddings generados para subfragmento de ${archivo}`);
+          }
+        }
       }
 
       embeddingsData[archivo] = embeddingsPorArchivo;
