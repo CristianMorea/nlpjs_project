@@ -1,11 +1,17 @@
-//similarity.js
+// similarity.js
 
 const fs = require('fs');
 const tf = require('@tensorflow/tfjs');
 const use = require('@tensorflow-models/universal-sentence-encoder');
 
 // Cargar los vectores de documentos desde el archivo JSON
-const docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));
+let docVectors;
+try {
+  docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));
+} catch (error) {
+  console.error('Error al cargar el archivo de vectores de documentos:', error);
+  process.exit(1);  // Terminar el proceso si el archivo no puede ser cargado
+}
 
 // Función para calcular la similitud de coseno
 function cosineSimilarity(vec1, vec2) {
@@ -18,9 +24,18 @@ function cosineSimilarity(vec1, vec2) {
   return dotProduct / (normVec1 * normVec2);  // Similitud de coseno
 }
 
+// Cargar el modelo de Universal Sentence Encoder solo una vez
+let model;
+async function loadModel() {
+  if (!model) {
+    model = await use.load();
+  }
+  return model;
+}
+
 // Función de búsqueda con una consulta de texto
 async function searchQuery(query) {
-  const model = await use.load();  // Cargar el modelo de Universal Sentence Encoder
+  const model = await loadModel();  // Cargar el modelo de Universal Sentence Encoder si no está cargado
   const queryEmbedding = await model.embed(query);  // Obtener el vector de la consulta (embedding)
 
   let queryTensor = queryEmbedding.reshape([queryEmbedding.shape[1]]);
@@ -51,7 +66,7 @@ async function searchQuery(query) {
     }
   }
 
-  console.log(`Mejor coincidencia: ${bestMatchText} con similitud: ${highestSimilarity}`);
+  console.log(`Mejor coincidencia: "${bestMatchText}" con similitud: ${highestSimilarity}`);
   return { bestMatchText, bestMatchEmbedding };  // Devolver tanto el texto como el embedding
 }
 

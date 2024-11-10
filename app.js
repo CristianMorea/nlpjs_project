@@ -14,6 +14,7 @@ const { searchQuery } = require('./similarity');
     const query = "Good practice” does not mean that the knowledge described should always be applied uniformly to all projects;";
     console.log(`Realizando búsqueda con la consulta: "${query}"`);
     await searchQuery(query);
+    
     console.log('Búsqueda completada.');
   } catch (error) {
     console.error("Error en el flujo de la aplicación:", error.message);
