@@ -1,3 +1,5 @@
+//milvusConnection.js
+
 const { MilvusClient } = require('@zilliz/milvus2-sdk-node');
 
 async function testConnection() {
