@@ -1,56 +1,93 @@
-const fs = require('fs');
-const tf = require('@tensorflow/tfjs');
-const use = require('@tensorflow-models/universal-sentence-encoder');
+// similarity.js
 
-// Cargar los vectores de documentos desde el archivo JSON
-const docVectors = JSON.parse(fs.readFileSync('document_vectors.json'));
+const { HfInference } = require('@huggingface/inference');
+const { MilvusClient } = require('@zilliz/milvus2-sdk-node');
+require('dotenv').config();
 
-// Función para calcular la similitud de coseno
-function cosineSimilarity(vec1, vec2) {
-  vec1 = vec1.reshape([vec1.shape[0]]);
-  vec2 = vec2.reshape([vec2.shape[0]]);
-  
-  const dotProduct = tf.dot(vec1, vec2).arraySync();  // Producto punto
-  const normVec1 = tf.norm(vec1).arraySync();  // Norma de vec1
-  const normVec2 = tf.norm(vec2).arraySync();  // Norma de vec2
-  return dotProduct / (normVec1 * normVec2);  // Similitud de coseno
-}
+const hfToken = process.env.HF_TOKEN || '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'; // Asegúrate de que este valor esté en tu archivo .env
+const hf = new HfInference(hfToken); // Define la instancia de HfInference
 
-// Función de búsqueda con una consulta de texto
-async function searchQuery(query) {
-  const model = await use.load();  // Cargar el modelo de Universal Sentence Encoder
-  const queryEmbedding = await model.embed(query);  // Obtener el vector de la consulta (embedding)
+// Conexión a Milvus
+const client = new MilvusClient({
+  address: 'localhost:19530', // Dirección del servidor Milvus
+});
 
-  let queryTensor = queryEmbedding.reshape([queryEmbedding.shape[1]]);
-  if (queryTensor.shape[0] !== 512) {
-    queryTensor = tf.pad(queryTensor, [[0, 512 - queryTensor.shape[0]]]);
-  }
-
-  let highestSimilarity = -1;  // Comenzamos con una similitud baja
-  let bestMatchText = '';
-  let bestMatchEmbedding = null;
-
-  // Iterar sobre los documentos y fragmentos almacenados
-  for (const [docName, docVectorArray] of Object.entries(docVectors)) {
-    for (const docVectorData of docVectorArray) {
-      const { texto, embedding } = docVectorData;  // Extraer el texto y el embedding
-
-      let docTensor = tf.tensor(embedding);
-      if (docTensor.shape[0] !== 512) {
-        docTensor = tf.pad(docTensor, [[0, 512 - docTensor.shape[0]]]);
-      }
-
-      const similarity = cosineSimilarity(queryTensor, docTensor);
-      if (similarity > highestSimilarity) {
-        highestSimilarity = similarity;
-        bestMatchText = texto;  // Guardar el texto del fragmento con mayor similitud
-        bestMatchEmbedding = embedding;  // Guardar el embedding más cercano
-      }
+// Función para cargar la colección en memoria
+async function cargarColeccion() {
+  try {
+    console.log('Cargando la colección en memoria...');
+    const loadResult = await client.loadCollection({
+      collection_name: 'colleccionIA',
+    });
+    if (loadResult.status.error_code === 0) {
+      console.log('Colección cargada en memoria correctamente.');
+    } else {
+      console.error('Error al cargar la colección en memoria:', loadResult.status);
     }
+  } catch (error) {
+    console.error('Error al cargar la colección:', error.message);
   }
-
-  console.log(`Mejor coincidencia: ${bestMatchText} con similitud: ${highestSimilarity}`);
-  return { bestMatchText, bestMatchEmbedding };  // Devolver tanto el texto como el embedding
 }
 
-module.exports = { searchQuery };
+// Función para ajustar el tamaño del embedding
+function ajustarEmbedding(embedding) {
+  const targetLength = 384;
+
+  if (embedding.length > targetLength) {
+    return embedding.slice(0, targetLength); // Recortar si es mayor a 384
+  } else if (embedding.length < targetLength) {
+    const padding = new Array(targetLength - embedding.length).fill(0);
+    return embedding.concat(padding); // Rellenar con ceros si es menor a 384
+  }
+
+  return embedding; // Si ya tiene 384, devolverlo tal cual
+}
+
+// Función para realizar la búsqueda de los embeddings más cercanos
+async function realizarBusqueda(queryText) {
+  try {
+    // Asegurarse de que la colección esté cargada
+    await cargarColeccion();
+
+    // Generar el embedding para el texto de consulta
+    console.log('Generando embedding para la consulta...');
+    const response = await hf.featureExtraction({
+      model: 'sentence-transformers/all-MiniLM-L6-v2', // Modelo preentrenado de Hugging Face
+      inputs: [queryText],
+    });
+
+    let queryEmbedding = response[0]; // El primer resultado es el embedding
+
+    // Ajustar la dimensión del embedding a 384
+    queryEmbedding = ajustarEmbedding(queryEmbedding);
+
+    console.log('Realizando búsqueda en Milvus...');
+    // Realizar la búsqueda en Milvus utilizando el embedding ajustado
+    const searchResults = await client.search({
+      collection_name: 'colleccionIA', // Nombre de la colección
+      query_records: [queryEmbedding], // El embedding de la consulta
+      top_k: 5, // Número de resultados más cercanos que deseas obtener
+      params: { nprobe: 10 },
+    });
+
+    console.log('Resultados de la búsqueda:', searchResults);
+
+    // Procesar y mostrar los resultados
+    if (searchResults.status.error_code === 0) {
+      const hits = searchResults.data[0].hits; // Obtener los hits (resultados)
+      if (hits.length > 0) {
+        hits.forEach(hit => {
+          console.log(`ID: ${hit.id}, Score: ${hit.score}`);
+        });
+      } else {
+        console.log('No se encontraron resultados.');
+      }
+    } else {
+      console.error('Error al realizar la búsqueda en Milvus:', searchResults.status);
+    }
+  } catch (error) {
+    console.error('Error al realizar la búsqueda:', error.message);
+  }
+}
+
+module.exports = { realizarBusqueda };

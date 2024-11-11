@@ -1,24 +1,32 @@
+//embeddings.js
+
 const fs = require('fs');
 const path = require('path');
 const { HfInference } = require('@huggingface/inference');
 const pdfParse = require('pdf-parse');
+const { MilvusClient, DataType } = require('@zilliz/milvus2-sdk-node');
 require('dotenv').config();
 
 const hfToken = process.env.HF_TOKEN || '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';
 const hf = new HfInference(hfToken);
 
-// Ruta de los documentos y archivo de salida
-const carpetaArchivos = path.join(__dirname, 'documentos');
-const archivoSalida = path.join(__dirname, 'document_vectors.json');
+// Conexión a Milvus
+const client = new MilvusClient({
+  address: 'localhost:19530', // Dirección del servidor Milvus
+});
 
-// Función para limpiar el contenido (puedes ajustarlo según tus necesidades)
+// Ruta de los documentos
+const carpetaArchivos = path.join(__dirname, 'documentos');
+
+// Función para limpiar el contenido (ajustado según tus necesidades)
 function limpiarTexto(texto) {
-  // Eliminar saltos de línea innecesarios, caracteres extraños, etc.
+  console.log('Limpiando texto...');
   return texto.replace(/\s+/g, ' ').trim();
 }
 
-// Función para dividir el texto en fragmentos de 512 tokens
-function dividirEnFragmentos(texto, maxTokens = 512) {
+// Función para dividir el texto en fragmentos de 384 tokens (ajustado para embeddings de 384)
+function dividirEnFragmentos(texto, maxTokens = 384) {
+  console.log(`Dividiendo el texto en fragmentos de ${maxTokens} tokens...`);
   const palabras = texto.split(' ');
   const fragmentos = [];
   let fragmento = [];
@@ -38,17 +46,20 @@ function dividirEnFragmentos(texto, maxTokens = 512) {
     fragmentos.push(fragmento.join(' '));
   }
 
+  console.log(`Fragmentos generados: ${fragmentos.length}`);
   return fragmentos;
 }
 
-// Función para leer y generar embeddings de los archivos
+// Función para generar y almacenar embeddings en Milvus
 async function generarEmbeddingsDeArchivos() {
   try {
+    console.log('Iniciando la generación de embeddings...');
     const archivos = fs.readdirSync(carpetaArchivos).filter(file => file.endsWith('.txt') || file.endsWith('.pdf'));
-    const embeddingsData = {};
+    console.log(`Archivos encontrados: ${archivos.length}`);
 
     for (const archivo of archivos) {
       const rutaArchivo = path.join(carpetaArchivos, archivo);
+      console.log(`Procesando archivo: ${archivo}`);
       let contenidoArchivo = '';
 
       // Si es un archivo PDF, lo convertimos a texto
@@ -61,54 +72,53 @@ async function generarEmbeddingsDeArchivos() {
         contenidoArchivo = limpiarTexto(contenidoArchivo);
       }
 
-      // Dividir el contenido en fragmentos de 512 tokens
+      // Dividir el contenido en fragmentos de 384 tokens
       const fragmentos = dividirEnFragmentos(contenidoArchivo);
-
-      const embeddingsPorArchivo = [];
+      console.log(`Fragmentos generados para ${archivo}: ${fragmentos.length}`);
 
       for (const fragmento of fragmentos) {
-        // Si el fragmento tiene menos de 512 tokens, podemos generar un embedding
-        if (fragmento.split(' ').length <= 512) {
-          const response = await hf.featureExtraction({
-            model: 'sentence-transformers/all-MiniLM-L6-v2',
-            inputs: [fragmento],
-          });
+        console.log(`Generando embeddings para fragmento de ${archivo}...`);
+        const response = await hf.featureExtraction({
+          model: 'sentence-transformers/all-MiniLM-L6-v2', // O elegir otro modelo con embeddings de 384
+          inputs: [fragmento],
+        });
 
-          // Guardar tanto el embedding como el texto del fragmento
-          embeddingsPorArchivo.push({
-            texto: fragmento,
-            embedding: response[0],  // Asumiendo que la respuesta es un array de embeddings
-          });
-          console.log(`Embeddings generados para fragmento de ${archivo}`);
-        } else {
-          // Si el fragmento es mayor que 512 tokens, lo dividimos en fragmentos más pequeños
-          const subFragmentos = dividirEnFragmentos(fragmento, 512);
-          for (const subFragmento of subFragmentos) {
-            const response = await hf.featureExtraction({
-              model: 'sentence-transformers/all-MiniLM-L6-v2',
-              inputs: [subFragmento],
-            });
+        // Verificar la respuesta
+        console.log(`Respuesta de Hugging Face: ${JSON.stringify(response, null, 2)}`);
 
-            // Guardar tanto el embedding como el texto del fragmento
-            embeddingsPorArchivo.push({
-              texto: subFragmento,
-              embedding: response[0],  // Asumiendo que la respuesta es un array de embeddings
-            });
-            console.log(`Embeddings generados para subfragmento de ${archivo}`);
-          }
+        // Obtener el embedding generado
+        const embedding = response[0];
+
+        // Verifica que el embedding tenga la dimensión correcta (384)
+        if (embedding.length !== 384) {
+          console.error('El vector embedding no tiene la dimensión correcta (debe ser 384).');
+          continue;
+        }
+
+        // Crear un objeto con el texto y el embedding
+        const insertData = {
+          id: Date.now(), // Usando el timestamp como ID único
+          text: fragmento,
+          embedding: embedding, // El embedding generado de 384 dimensiones
+        };
+
+        // Insertar en la colección de Milvus
+        try {
+          const insertResponse = await client.insert({
+            collection_name: 'colleccionIA',
+            fields_data: [insertData], // Insertar un solo objeto de datos
+          });
+          console.log(`Embedding insertado para fragmento de ${archivo}:`, insertResponse);
+        } catch (error) {
+          console.error(`Error al insertar el embedding de ${archivo}:`, error);
         }
       }
-
-      embeddingsData[archivo] = embeddingsPorArchivo;
-      console.log(`Embeddings generados para ${archivo}`);
     }
-
-    // Guardar los embeddings en un archivo JSON
-    fs.writeFileSync(archivoSalida, JSON.stringify(embeddingsData, null, 2));
-    console.log(`Embeddings guardados en ${archivoSalida}`);
+    console.log('Embeddings generados e insertados en Milvus.');
   } catch (error) {
     console.error('Error al generar embeddings:', error.message);
   }
 }
+
 
 module.exports = { generarEmbeddingsDeArchivos };
