@@ -1,14 +1,14 @@
-const { MilvusClient, DataType } = require('@zilliz/milvus2-sdk-node');
+//createCollection.js
 
+const { MilvusClient, DataType, IndexType, MetricType } = require('@zilliz/milvus2-sdk-node');
 
+// Función para eliminar la colección si es necesario
 async function dropCollection() {
-  // Conéctate al servidor de Milvus
   const client = new MilvusClient({
     address: 'localhost:19530', // Dirección del servidor Milvus
   });
 
   try {
-    // Eliminar la colección
     const response = await client.dropCollection({
       collection_name: 'text_embeddings_collection',
     });
@@ -17,8 +17,9 @@ async function dropCollection() {
     console.error('Error al eliminar la colección:', error);
   }
 }
+
+// Función para crear la colección
 async function createCollection() {
-  // Conéctate al servidor de Milvus
   const client = new MilvusClient({
     address: 'localhost:19530', // Dirección del servidor Milvus
   });
@@ -50,13 +51,28 @@ async function createCollection() {
   };
 
   try {
-    // Crea la colección
+    // Crear la colección
     const response = await client.createCollection(collectionSchema);
     console.log('Colección creada:', response);
+
+    // Crear el índice para el campo de embedding
+    const indexParams = {
+      collection_name: 'colleccionIA',
+      field_name: 'embedding',  // El campo para el cual deseas crear el índice
+      index_type: IndexType.IVF_FLAT,  // Tipo de índice (puedes elegir otros como IVF_SQ8, HNSW, etc.)
+      metric_type: MetricType.L2,  // Tipo de métrica (L2, IP, etc.)
+      params: {
+        nlist: 128,  // Ajusta el parámetro según el tipo de índice
+      },
+    };
+
+    const indexResponse = await client.createIndex(indexParams);
+    console.log('Índice creado:', indexResponse);
+
   } catch (error) {
-    console.error('Error al crear la colección:', error);
+    console.error('Error al crear la colección o el índice:', error);
   }
 }
 
-// Ejecutar la función para crear la colección
+// Ejecutar la función para crear la colección y el índice
 createCollection();
