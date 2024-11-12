@@ -10,7 +10,7 @@ const { realizarBusqueda } = require('./similarity');
     await generarEmbeddingsDeArchivos();
 
     // Texto de ejemplo para realizar la búsqueda (esto lo puedes cambiar según lo que necesites)
-    const queryText = "Objetivo Generalc";
+    const queryText = "Basic Concept of a System";
     await realizarBusqueda(queryText);
     
   } catch (error) {
