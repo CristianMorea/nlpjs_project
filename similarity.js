@@ -1,92 +1,42 @@
-// similarity.js
+const { client } = require('./milvusClient'); // Importa el cliente Milvus
+const { generarEmbedding } = require('./embedder'); // Importa la función para generar embeddings
 
-const { HfInference } = require('@huggingface/inference');
-const { MilvusClient } = require('@zilliz/milvus2-sdk-node');
-require('dotenv').config();
-
-const hfToken = process.env.HF_TOKEN || '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'; // Asegúrate de que este valor esté en tu archivo .env
-const hf = new HfInference(hfToken); // Define la instancia de HfInference
-
-// Conexión a Milvus
-const client = new MilvusClient({
-  address: 'localhost:19530', // Dirección del servidor Milvus
-});
-
-// Función para cargar la colección en memoria
-async function cargarColeccion() {
-  try {
-    console.log('Cargando la colección en memoria...');
-    const loadResult = await client.loadCollection({
-      collection_name: 'colleccionIA',
-    });
-    if (loadResult.status.error_code === 0) {
-      console.log('Colección cargada en memoria correctamente.');
-    } else {
-      console.error('Error al cargar la colección en memoria:', loadResult.status);
-    }
-  } catch (error) {
-    console.error('Error al cargar la colección:', error.message);
-  }
-}
-
-// Función para ajustar el tamaño del embedding
-function ajustarEmbedding(embedding) {
-  const targetLength = 384;
-
-  if (embedding.length > targetLength) {
-    return embedding.slice(0, targetLength); // Recortar si es mayor a 384
-  } else if (embedding.length < targetLength) {
-    const padding = new Array(targetLength - embedding.length).fill(0);
-    return embedding.concat(padding); // Rellenar con ceros si es menor a 384
-  }
-
-  return embedding; // Si ya tiene 384, devolverlo tal cual
-}
-
-// Función para realizar la búsqueda de los embeddings más cercanos
+// Realiza una búsqueda de similitud en Milvus
 async function realizarBusqueda(queryText) {
   try {
-    // Asegurarse de que la colección esté cargada
-    await cargarColeccion();
+    // Genera el embedding para el texto de consulta
+    const queryEmbedding = await generarEmbedding(queryText);
 
-    // Generar el embedding para el texto de consulta
-    console.log('Generando embedding para la consulta...');
-    const response = await hf.featureExtraction({
-      model: 'sentence-transformers/all-MiniLM-L6-v2', // Modelo preentrenado de Hugging Face
-      inputs: [queryText],
-    });
+    if (!queryEmbedding || queryEmbedding.length !== 384) {
+      console.error('Error: el embedding generado es inválido o no tiene la longitud requerida de 384.');
+      return null;
+    }
 
-    let queryEmbedding = response[0]; // El primer resultado es el embedding
+    // Configuración de la consulta
+    const searchParams = {
+      collection_name: 'colleccionIA',
+      vector: [queryEmbedding],  // Embedding del texto de consulta
+      anns_field: 'embedding',   // Campo de la colección donde están los embeddings
+      topk: 5,                   // Número de resultados más similares a devolver
+      metric_type: 'L2',         // Tipo de métrica de similitud (L2 es distancia euclidiana)
+      params: { nprobe: 10 },    // Parámetros específicos del índice
+      output_fields: ['id', 'text'] // Campos a incluir en los resultados
+    };
 
-    // Ajustar la dimensión del embedding a 384
-    queryEmbedding = ajustarEmbedding(queryEmbedding);
+    // Realiza la consulta de similitud en Milvus
+    const searchResults = await client.search(searchParams);
 
-    console.log('Realizando búsqueda en Milvus...');
-    // Realizar la búsqueda en Milvus utilizando el embedding ajustado
-    const searchResults = await client.search({
-      collection_name: 'colleccionIA', // Nombre de la colección
-      query_records: [queryEmbedding], // El embedding de la consulta
-      top_k: 5, // Número de resultados más cercanos que deseas obtener
-      params: { nprobe: 10 },
-    });
-
-    console.log('Resultados de la búsqueda:', searchResults);
-
-    // Procesar y mostrar los resultados
-    if (searchResults.status.error_code === 0) {
-      const hits = searchResults.data[0].hits; // Obtener los hits (resultados)
-      if (hits.length > 0) {
-        hits.forEach(hit => {
-          console.log(`ID: ${hit.id}, Score: ${hit.score}`);
-        });
-      } else {
-        console.log('No se encontraron resultados.');
-      }
+    // Muestra y devuelve los resultados
+    if (searchResults && searchResults.results) {
+      console.log('Resultados de la búsqueda de similitud:', searchResults.results);
+      return searchResults.results;
     } else {
-      console.error('Error al realizar la búsqueda en Milvus:', searchResults.status);
+      console.log('No se encontraron resultados para la consulta.');
+      return null;
     }
   } catch (error) {
-    console.error('Error al realizar la búsqueda:', error.message);
+    console.error('Error en la búsqueda de similitud:', error.message);
+    throw error;
   }
 }
 
