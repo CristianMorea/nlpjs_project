@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { procesarArchivo, generarEmbedding } = require('./embedder');
-const { ensureCollectionExists, insertInMilvus } = require('./milvusClient');
+const { ensureCollectionExists, insertInMilvus, client } = require('./milvusClient');
 
 const carpetaArchivos = path.join(__dirname, 'documentos');
 const collectionName = 'colleccionIA';
@@ -38,6 +38,12 @@ async function generarEmbeddingsDeArchivos() {
         if (embeddingsConTexto.length) {
           const insertResponse = await insertInMilvus(collectionName, embeddingsConTexto); // Inserta los embeddings y textos en Milvus
           console.log(`Embeddings insertados correctamente para ${archivo}:`, insertResponse); // Log completo de la respuesta
+
+          // Cargar la colección en memoria después de insertar los datos
+          await client.loadCollectionSync({
+            collection_name: collectionName,
+          });
+          console.log(`Colección ${collectionName} cargada en memoria después de insertar datos.`);
         } else {
           console.log(`No se generaron embeddings válidos para ${archivo}`);
         }
@@ -49,6 +55,5 @@ async function generarEmbeddingsDeArchivos() {
     console.error('Error al generar e insertar embeddings:', error.message);
   }
 }
-
 
 module.exports = { generarEmbeddingsDeArchivos };
