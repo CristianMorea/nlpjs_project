@@ -21,9 +21,9 @@ Este proyecto utiliza el cliente de Node.js para Milvus junto con Hugging Face p
 
 ## Screenshots
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/screenshots/corriendo%20Doker.png)
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/screenshots/iniciando%20el%20proyecto.png)
 
 ![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
 
@@ -140,4 +140,4 @@ El proyecto depende de los siguientes paquetes principales:
 2. `@huggingface/inference` - Interacción con la API de Hugging Face
 3. `dotenv` - Carga de variables de entorno
 4. `fs` (módulo integrado de Node.js) - Manejo de archivos
-5. `pdf-parse` - Extracción de texto de archivos PDF
+
