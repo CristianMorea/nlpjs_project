@@ -1,93 +1,163 @@
-# Proyecto de Búsqueda por Similaridad con Milvus y Node.js
+# Proyecto de Búsqueda por Similaridad
+# _Vector Embeddings con Milvus y Node.js_
+
+
 
 Este proyecto utiliza el cliente de Node.js para Milvus junto con Hugging Face para generar embeddings vectoriales a partir de documentos de texto (archivos PDF o TXT) y realizar búsquedas de similitud en esos vectores almacenados en Milvus.
 
-## Dependencias
+- Procesa documentos PDF y TXT automáticamente
+- Genera embeddings con modelos avanzados de Hugging Face
+- Realiza búsquedas semánticas por similitud en Milvus
+- ✨Encuentra conexiones que las búsquedas por palabras clave no pueden detectar✨
 
-Para ejecutar este proyecto, es necesario instalar y configurar las siguientes dependencias:
+## Características
 
-### 1. `@zilliz/milvus2-sdk-node`
-- **Descripción**: Este paquete proporciona el cliente Node.js para conectar y operar con el servidor Milvus.
-- **Instalación**:
-  ```bash
-  npm install @zilliz/milvus2-sdk-node
-Uso: Este cliente permite crear colecciones, insertar vectores y realizar búsquedas de similitud en Milvus.
-2. @huggingface/inference
-Descripción: Este paquete permite interactuar con la API de Hugging Face para generar embeddings a partir de textos usando modelos de lenguaje.
-Instalación:
-bash
-Copiar código
-npm install @huggingface/inference
-Uso: Usamos este cliente para enviar textos a Hugging Face y recibir los embeddings generados, que luego almacenamos en Milvus.
-3. dotenv
-Descripción: dotenv se usa para cargar variables de entorno desde un archivo .env en process.env, lo cual es útil para mantener tokens y configuraciones de manera segura.
-Instalación:
-bash
-Copiar código
-npm install dotenv
-Uso: Este paquete carga el token de autenticación de Hugging Face desde el archivo .env.
-4. fs (módulo de Node.js)
-Descripción: fs es el módulo de sistema de archivos integrado en Node.js. Se utiliza para leer y manejar archivos locales, como los archivos de texto y PDF que queremos procesar.
-Instalación: fs ya está incluido en Node.js, por lo que no necesita instalación adicional.
-Uso: fs permite leer los contenidos de archivos que serán procesados y convertidos en embeddings.
-5. pdf-parse
-Descripción: pdf-parse permite extraer texto de archivos PDF en Node.js.
-Instalación:
-bash
-Copiar código
-npm install pdf-parse
-Uso: Con este paquete, el proyecto puede leer archivos PDF y extraer el contenido para convertirlo en embeddings vectoriales.
-Instalación
-1. Crear el archivo package.json
-Crea un nuevo directorio para el proyecto:
-bash
-Copiar código
-mkdir myProject
-cd myProject
-Inicia un proyecto de Node.js:
-bash
-Copiar código
-npm init -y
-2. Instalar dependencias
-Instala todas las dependencias necesarias con el siguiente comando:
+- Indexación automática de documentos y generación de embeddings
+- Búsqueda semántica basada en el significado real del texto, no sólo palabras clave
+- Arquitectura escalable para manejar grandes volúmenes de documentos
+- Soporte para múltiples formatos de archivo (PDF, TXT)
+- Configuración flexible del modelo de embedding según sus necesidades
 
-bash
-Copiar código
-npm install @zilliz/milvus2-sdk-node @huggingface/inference dotenv pdf-parse
-3. Crear un servidor Milvus
-Para ejecutar Milvus, usa Docker. Puedes descargar y ejecutar Milvus utilizando docker-compose:
+## Tecnologías
 
-bash
-Copiar código
+Este proyecto utiliza varios proyectos de código abierto para funcionar correctamente:
+
+- [Node.js] - Entorno de ejecución para JavaScript en el servidor
+- [Milvus] - Base de datos vectorial de alto rendimiento
+- [Hugging Face] - API para acceder a modelos de lenguaje avanzados
+- [Express] - Framework web rápido para Node.js
+- [pdf-parse] - Herramienta para extraer texto de archivos PDF
+- [dotenv] - Gestión segura de variables de entorno
+
+Y por supuesto, el proyecto es de código abierto con un [repositorio público][repo]
+en GitHub.
+
+## Requisitos
+
+Este proyecto requiere [Node.js](https://nodejs.org/) v10+ y [Docker](https://www.docker.com/) para ejecutar Milvus.
+
+## Instalación
+
+### 1. Configurar Milvus con Docker
+
+```sh
 wget https://github.com/milvus-io/milvus/releases/download/v2.2.8/milvus-standalone-docker-compose.yml -O docker-compose.yml
 sudo docker-compose up -d
-Este comando descarga el archivo docker-compose.yml de Milvus y lo inicia en modo independiente.
+```
 
-Configuración del Proyecto
-Archivo .env: Crea un archivo .env en el directorio raíz del proyecto y agrega tu token de Hugging Face:
-plaintext
-Copiar código
+### 2. Instalar dependencias del proyecto
+
+```sh
+cd proyecto-similaridad
+npm install @zilliz/milvus2-sdk-node @huggingface/inference dotenv pdf-parse
+```
+
+### 3. Configurar variables de entorno
+
+Crea un archivo `.env` en el directorio raíz:
+
+```
 HF_TOKEN=your_huggingface_token_here
-Estructura de Archivos:
-app.js: Controla el flujo principal de la aplicación, incluyendo la generación de embeddings y la búsqueda de similitud.
-createCollection.js: Configura la colección en Milvus para almacenar los embeddings.
-embedder.js: Contiene las funciones de procesamiento de archivos y generación de embeddings.
-embeddings.js: Ejecuta la generación de embeddings a partir de archivos.
-milvusClient.js: Contiene las funciones de cliente de Milvus, como verificar la existencia de una colección e insertar embeddings.
-similarity.js: Realiza búsquedas de similitud en Milvus.
-Inicio rápido
-Esta guía describe cómo configurar la aplicación y realizar operaciones de búsqueda de similitud con Milvus y Node.js.
+```
 
-Crear y configurar la colección en Milvus: En createCollection.js, configura la colección y crea un índice para los embeddings.
+## Uso
 
-Generar embeddings de los archivos: embedder.js carga y procesa archivos para generar embeddings utilizando el modelo de Hugging Face. Los embeddings se dividen y almacenan en la colección en Milvus a través de embeddings.js.
+Para ejecutar el flujo principal del proyecto:
 
-Ejecutar una búsqueda de similitud: similarity.js toma un texto de consulta, genera su embedding y realiza una búsqueda en Milvus para encontrar los textos más similares en la colección.
-
-Ejecución
-Para ejecutar el flujo principal del proyecto, usa:
-
-bash
-Copiar código
+```sh
 node app.js
-Este comando generará embeddings para todos los archivos en la carpeta documentos y luego ejecutará una búsqueda de similitud con un texto de ejemplo.
+```
+
+Para crear la colección en Milvus:
+
+```sh
+node createCollection.js
+```
+
+Para generar embeddings de documentos:
+
+```sh
+node embeddings.js
+```
+
+Para realizar búsquedas de similitud:
+
+```sh
+node similarity.js "Tu texto de consulta aquí"
+```
+
+## Estructura del Proyecto
+
+| Archivo | Descripción |
+| ------ | ------ |
+| app.js | Punto de entrada principal y control de flujo de la aplicación |
+| createCollection.js | Configuración de la colección en Milvus para almacenar embeddings |
+| embedder.js | Procesamiento de archivos y generación de embeddings |
+| embeddings.js | Ejecución de generación de embeddings a partir de archivos |
+| milvusClient.js | Funciones del cliente de Milvus (verificación de colección, inserción) |
+| similarity.js | Búsquedas de similitud en la base de datos vectorial |
+
+## Desarrollo
+
+¿Quieres contribuir? ¡Excelente!
+
+El proyecto está estructurado para facilitar su expansión:
+
+1. Abre tu Terminal favorito y ejecuta:
+
+```sh
+npm install
+```
+
+2. Configura tu entorno de desarrollo:
+
+```sh
+node app.js
+```
+
+3. Realiza tus cambios y crea una solicitud de extracción en GitHub.
+
+## Docker
+
+El proyecto es fácil de instalar y desplegar en un contenedor Docker.
+
+```sh
+cd proyecto-similaridad
+docker build -t <usuario>/proyecto-similaridad:1.0 .
+```
+
+Una vez terminado, ejecuta la imagen de Docker:
+
+```sh
+docker run -d -p 8000:8080 --name=proyecto-similaridad <usuario>/proyecto-similaridad:1.0
+```
+
+Verifica la implementación navegando a la dirección de tu servidor:
+
+```sh
+127.0.0.1:8000
+```
+
+## Dependencias
+
+El proyecto depende de los siguientes paquetes principales:
+
+1. `@zilliz/milvus2-sdk-node` - Cliente Node.js para Milvus
+2. `@huggingface/inference` - Interacción con la API de Hugging Face
+3. `dotenv` - Carga de variables de entorno
+4. `fs` (módulo integrado de Node.js) - Manejo de archivos
+5. `pdf-parse` - Extracción de texto de archivos PDF
+
+## Licencia
+
+MIT
+
+**Software Libre, ¡Por Supuesto!**
+
+[//]: # (Referencias utilizadas en el documento)
+
+   [repo]: <https://github.com/tuusuario/proyecto-similaridad>
+   [node.js]: <http://nodejs.org>
+   [Milvus]: <https://milvus.io/>
+   [Hugging Face]: <https://huggingface.co/>
+   [express]: <http://expressjs.com>
