@@ -25,9 +25,10 @@ Este proyecto utiliza el cliente de Node.js para Milvus junto con Hugging Face p
 
 ![App Screenshot](assets/screenshots/iniciando%20el%20proyecto.png)
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/screenshots/Embedings%20generados.png)
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](assets/screenshots/Busqueda%20por%20similitud.png)
+![App Screenshot](assets/screenshots/Busqueda%20por%20similitud%20final.png)
 ## Tecnologias
 
 
